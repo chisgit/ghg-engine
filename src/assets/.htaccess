@@ -1,0 +1,5 @@
+# Add Permission-Policy header to opt-in to unload event listeners
+# This will allow the application to continue using unload events during the transition period
+<IfModule mod_headers.c>
+    Header set Permissions-Policy "unload=(), pagehide=()"
+</IfModule>

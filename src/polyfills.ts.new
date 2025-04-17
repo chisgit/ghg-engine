@@ -1,0 +1,51 @@
+/**
+ * This file includes polyfills needed by Angular and is loaded before the app.
+ * You can add your own extra polyfills to this file.
+ */
+
+import 'zone.js';  // Included with Angular CLI
+
+/**
+ * Fix for unload event listeners deprecation warning
+ * 
+ * This is a more comprehensive fix that patches multiple ways unload events
+ * might be registered in the application or its dependencies.
+ */
+if (typeof window !== 'undefined') {
+  // Patch window.addEventListener
+  const originalAddEventListener = window.addEventListener;
+  window.addEventListener = function(
+    type: string, 
+    listener: EventListenerOrEventListenerObject, 
+    options?: boolean | AddEventListenerOptions
+  ) {
+    if (type === 'unload') {
+      return originalAddEventListener.call(this, 'pagehide', listener, options);
+    }
+    return originalAddEventListener.call(this, type, listener, options);
+  };
+
+  // Patch EventTarget.prototype.addEventListener to catch all DOM elements
+  const originalETAddEventListener = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function(
+    type: string, 
+    listener: EventListenerOrEventListenerObject, 
+    options?: boolean | AddEventListenerOptions
+  ) {
+    if (type === 'unload') {
+      return originalETAddEventListener.call(this, 'pagehide', listener, options);
+    }
+    return originalETAddEventListener.call(this, type, listener, options);
+  };
+
+  // Patch onunload property
+  Object.defineProperty(window, 'onunload', {
+    get: function() {
+      return window.onpagehide;
+    },
+    set: function(handler: any) {
+      window.onpagehide = handler;
+    },
+    configurable: true
+  });
+}

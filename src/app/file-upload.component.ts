@@ -27,11 +27,22 @@ import { NgIf } from '@angular/common';
 export class FileUploadComponent {
   selectedFile: File | null = null;
 
+  constructor() {
+    console.log('[DEBUG] FileUploadComponent constructed');
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       this.selectedFile = input.files[0];
-      console.log('File selected:', this.selectedFile);
+      console.log('[DEBUG] File selected:', this.selectedFile);
     }
+  }
+
+  logToTerminal(message: string): void {
+    // This is a placeholder. In a browser app, you cannot write to the terminal directly.
+    // You would need a backend or Node.js context to do this.
+    // For now, this will just log to the browser console as a fallback.
+    console.log('[TERMINAL]', message);
   }
 }

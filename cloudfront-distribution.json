@@ -1,0 +1,49 @@
+{
+  "Comment": "Distribution for GHG Engine Angular Application",
+  "Origins": [
+    {
+      "Id": "S3Origin",
+      "DomainName": "your-s3-bucket-name.s3.amazonaws.com",
+      "S3OriginConfig": {
+        "OriginAccessIdentity": "origin-access-identity/cloudfront/YOUR_OAI_ID"
+      }
+    }
+  ],
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "S3Origin",
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "Compress": true,
+    "FunctionAssociations": [
+      {
+        "EventType": "viewer-response",
+        "FunctionARN": "arn:aws:cloudfront::YOUR_AWS_ACCOUNT:function/ghg-security-headers"
+      }
+    ],
+    "ForwardedValues": {
+      "QueryString": false,
+      "Cookies": {
+        "Forward": "none"
+      }
+    },
+    "MinTTL": 0,
+    "DefaultTTL": 86400,
+    "MaxTTL": 31536000
+  },
+  "CustomErrorResponses": [
+    {
+      "ErrorCode": 403,
+      "ResponsePagePath": "/index.html",
+      "ResponseCode": 200,
+      "ErrorCachingMinTTL": 300
+    },
+    {
+      "ErrorCode": 404,
+      "ResponsePagePath": "/index.html",
+      "ResponseCode": 200,
+      "ErrorCachingMinTTL": 300
+    }
+  ],
+  "Enabled": true,
+  "DefaultRootObject": "index.html",
+  "PriceClass": "PriceClass_100"
+}

@@ -1,4 +1,4 @@
- ## CORE PRINCIPLES
+## CORE PRINCIPLES
  - NEVER remove existing functionality
  - Maintain data model integrity
  - Preserve all EXISTING FUNCTIONALITY
@@ -24,158 +24,60 @@
 - Node.js: LTS version 20.x (AWS Lambda compatible)
 - Angular: 15.2.x with standalone components
 
-## OKTA CONFIGURATION
-- Domain: dev-43296795.okta.com
-- Client ID: 0oao52hsldb6anYgg5d7
+## TROUBLESHOOTING
 
-## CORE PRINCIPLES
-- Use standalone components consistently throughout
-- Maintain clear separation of concerns
-- Follow security best practices
-- Keep performance optimizations
-- Use small, testable changes
-- Preserve console logging for debugging
-- Follow test-driven development practices
+### Authentication Issues
+- **Symptom**: Page reloads after login but `isAuthenticated` remains false
+- **Symptom**: Token redirect followed by returning to login page (redirect loop)
+- **Possible causes**:
+  1. Callback URL misconfiguration in Okta
+  2. Missing or incorrect redirect handling
+  3. Token storage issues
+  4. CORS configuration problems
+  5. Incorrect Okta configuration in app
+  6. Token processing failure
+  7. Hash fragment not being properly processed
 
-## DEVELOPMENT GUIDELINES
-- Use PowerShell for Windows commands
-- Use "npm run" pattern instead of "&&" or ";"
-- Navigate to C:\Users\User\FileUpload\puro-ghg2
-- Keep changes small and testable
-- Maintain existing console logs
-- Follow Agile and TDD approaches
+### Authentication Debugging Steps
+1. Verify Okta application configuration:
+   - Login redirect URI should match application URL
+   - Allowed origins should include development URL
+   - Implicit flow with PKCE should be enabled
+   - Make sure login redirect URI includes the exact callback path your app expects
 
-## CODE STYLE
-- Use meaningful variable and function names
-- Include documentation for functions and classes
-- Keep functions focused and single-purpose
-- Use TypeScript types consistently
-- Follow Angular style guide
+2. Check browser storage:
+   - Inspect localStorage/sessionStorage for tokens
+   - Check for cookie restrictions (SameSite, Secure flags)
+   - Verify browser's cookie/localStorage policies aren't blocking storage
 
-## ARCHITECTURE
+3. Network request analysis:
+   - Verify redirect_uri parameter in authentication request
+   - Check for CORS errors in console
+   - Ensure token endpoint is accessible
+   - Look for 401/403 errors in network requests
+   - Check if the token exchange request is completing successfully
 
-### 1. User Access and Authentication
-Users: [File Uploader, GHG Admin]
-Entry Point: GHG UI (Web Browser)
-Authentication:
-  - GHG UI --> Backend Authentication Endpoint
-  - Backend --> Redirect to Okta Login Page
-  - GHG Admin --> MFA via Okta
-  - Okta --> Issues Okta Token to Backend
-  - Backend --> Creates session for user
-  - Backend --> Redirects user back to UI with session token
-Output: Session token for authenticated users
+4. Code verification:
+   - Confirm authStateManager subscription is maintained
+   - Verify token handling and storage logic
+   - Check for proper initialization sequence
+   - Ensure the callback handler correctly processes token information
+   - Verify hash fragment handling in authentication flow
 
-### 2. Web Content Delivery
-Content Source: S3 Bucket (GHG Web Content)
-CDN & Edge Processing: CloudFront
-Edge Compute: Lambda@Edge
-Security: WAF
-Flow:
-  [User] --> [GHG UI] --> [CloudFront] --> [Lambda@Edge] --> [S3 Bucket] --> [Lambda@Edge] --> [CloudFront] --> [GHG UI]
-
-### 3. API Access and Authorization
-API Endpoints: CRUD API Endpoints
-Entry Point: CloudFront
-API Gateway: Manages API requests
-Authorization: Lambda Authorizer (Validates Okta Token)
-Flow:
-  [GHG UI] --> [CRUD API Request with Okta Token] --> [CloudFront] --> [API Gateway] --> [Lambda Authorizer] --> [CRUD API Endpoints]
-
-### 4. Detailed System Architecture
-
-#### Components:
-- **Okta:**
-  - OIDC Endpoints for authentication
-  - Authentication UI at `dev-43296795.okta.com` (local development)
-  - User entities: Employees, Partners, Recipients
-
-- **Browser (JavaScript Client):** 
-  - Angular-based SPA with hash-based routing
-  - Communicates with CloudFront and Okta
-
-- **AWS CloudFront Account:**
-  - Public endpoint `@purolator.com`
-  - Shared domain across applications
-  - Generic routing configuration
-
-- **AWS Application Account:**
-  - VPC with Private Subnet
-  - Lambda Functions for backend logic
-  - API Gateway with public endpoint `@aws-purolator.com`
-  - Lambda Authorizer for JWT validation
-  - S3 for application web assets (private buckets)
-
-#### Authentication Flow:
-1. User accesses application via browser
-2. Browser sends authentication request to backend endpoint
-3. Backend redirects user to Okta Authentication UI
-4. User authenticates through Okta
-5. Okta redirects back to backend callback endpoint
-6. Backend processes Okta tokens and creates a session
-7. Backend redirects user back to UI with session cookie/token
-8. API requests include session information for authorization
-9. Lambda Authorizer verifies session before granting backend access
-
-#### Routing Configuration:
-- `-/app/*` → CloudFront
-- `/{app}/*` → S3 (web assets)
-- `/{app}/api*` → API Gateway
-- CloudFront domain is shared across applications
-- Application has two routing types:
-  1. S3 bucket for static web assets
-  2. API Gateway for compute environment
-
-#### Security Requirements:
-- S3 buckets must be private (no public hosting/access)
-- Protected resources served via API Gateway or Signed URLs
-- All static resources served from private S3 buckets via CloudFront
-- JWT token included in `x-amzn-oidc-data` header for API authentication
-
-#### URL Patterns:
-- Landing: `http://localhost:4200/{app}/index.html` (for local development)
-- Login: `http://localhost:4200/{app}/login`
-- Logout: `http://localhost:4200/{app}/logout`
-- API: `http://localhost:4200/{app}/api/{resource}`
-
-## COMPONENTS LIST
-- Users: File Uploader, GHG Admin
-- GHG UI: Web User Interface
-- Okta Identity Cloud: Authentication Provider
-- CRUD API Endpoints: Backend Services
-- CloudFront: CDN, Entry Point
-- API Gateway: API Management
-- Lambda Authorizer: Authorization Function
-- Lambda@Edge: Edge Computing
-- S3 Bucket: Web Content Storage
-- WAF: Web Application Firewall
-
-## DEVELOPMENT WORKFLOW
-1. Start with authentication implementation
-2. Build basic UI components
-3. Implement file upload functionality
-4. Add AWS integration
-5. Implement security measures
-6. Add additional features
-
-## REQUIREMENTS
-### Authentication
-- Secure Okta integration
-- MFA for admin users
-- Token management
-- Session handling
-
-### UI Requirements
-- Angular Material components
-- Responsive design
-- File upload functionality
-  - Drag and drop
-  - File browser
-  - Progress indication
-  - File type validation (.csv, .txt)
-
-### Future Expansion
-- AWS S3 integration
-- Additional management pages
-- Enhanced file processing
-- Extended platform features
+### Redirect Loop Solutions
+1. Check browser console on the redirect page before it redirects again
+2. Use URL parameters instead of hash fragments if hash parsing is failing
+3. Verify that your Okta SDK version is compatible with Angular version
+4. Add explicit token processing code to handle the redirect:
+   ```typescript
+   // In component handling the callback:
+   this.oktaAuth.handleRedirect().then(() => {
+     // Successfully processed the token
+     this.router.navigate(['/dashboard']);
+   }).catch(error => {
+     console.error('Failed to process authentication redirect:', error);
+   });
+   ```
+5. Check for URL encoding issues in the callback URL
+6. Try clearing browser cache and cookies
+7. Verify app is correctly configured for OIDC authentication flow

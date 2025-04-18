@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Okta Authentication Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px 10px 0;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0055aa;
+        }
+        #output {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            height: 400px;
+            overflow: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin-top: 15px;
+        }
+        h1 {
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .settings {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .settings input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+        .settings label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Okta Authentication Diagnostic Tool</h1>
+    
+    <div class="settings">
+        <h3>Okta Configuration</h3>
+        <div>
+            <label for="clientId">Client ID:</label>
+            <input type="text" id="clientId" value="0oao52hsldb6anYgg5d7">
+        </div>
+        <div>
+            <label for="issuer">Issuer:</label>
+            <input type="text" id="issuer" value="https://dev-43296795.okta.com/oauth2/default">
+        </div>
+        <div>
+            <label for="redirectUri">Redirect URI:</label>
+            <input type="text" id="redirectUri" value="">
+        </div>
+    </div>
+    
+    <div>
+        <button onclick="checkTokenStorage()">Check Token Storage</button>
+        <button onclick="validateConfig()">Validate Config</button>
+        <button onclick="monitorNetwork()">Monitor Network</button>
+        <button onclick="runAllDiagnostics()">Run All Diagnostics</button>
+        <button onclick="clearOutput()">Clear Output</button>
+    </div>
+    
+    <div id="output"></div>
+    
+    <script>
+        // Set default redirect URI
+        document.getElementById('redirectUri').value = window.location.origin + '/login/callback';
+        
+        // Output logging function
+        function log(message) {
+            const output = document.getElementById('output');
+            if (typeof message === 'object') {
+                message = JSON.stringify(message, null, 2);
+            }
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            output.innerHTML += `[${timestamp}] ${message}\n`;
+            console.log(message);
+        }
+
+        // Clear output
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        // Get current config
+        function getConfig() {
+            return {
+                clientId: document.getElementById('clientId').value,
+                issuer: document.getElementById('issuer').value,
+                redirectUri: document.getElementById('redirectUri').value
+            };
+        }
+
+        // Check token storage
+        function checkTokenStorage() {
+            clearOutput();
+            log('==== OKTA TOKEN STORAGE CHECKER ====');
+            
+            // Check localStorage
+            log('Checking localStorage for Okta tokens:');
+            const localStorageKeys = Object.keys(localStorage).filter(key => 
+                key.includes('okta') || key.includes('token') || key.includes('auth'));
+            
+            if (localStorageKeys.length > 0) {
+                log('Found potential Okta keys in localStorage:');
+                localStorageKeys.forEach(key => {
+                    try {
+                        log(`- ${key}: ${localStorage.getItem(key)}`);
+                    } catch (e) {
+                        log(`- Could not read ${key}: ${e}`);
+                    }
+                });
+            } else {
+                log('No Okta-related keys found in localStorage');
+            }
+            
+            // Check sessionStorage
+            log('\nChecking sessionStorage for Okta tokens:');
+            const sessionStorageKeys = Object.keys(sessionStorage).filter(key => 
+                key.includes('okta') || key.includes('token') || key.includes('auth'));
+            
+            if (sessionStorageKeys.length > 0) {
+                log('Found potential Okta keys in sessionStorage:');
+                sessionStorageKeys.forEach(key => {
+                    try {
+                        log(`- ${key}: ${sessionStorage.getItem(key)}`);
+                    } catch (e) {
+                        log(`- Could not read ${key}: ${e}`);
+                    }
+                });
+            } else {
+                log('No Okta-related keys found in sessionStorage');
+            }
+            
+            // Check cookies
+            log('\nChecking cookies for Okta tokens:');
+            const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+            const oktaCookies = cookies.filter(cookie => 
+                cookie.includes('okta') || cookie.includes('token') || cookie.includes('auth'));
+            
+            if (oktaCookies.length > 0) {
+                log('Found potential Okta cookies:');
+                oktaCookies.forEach(cookie => {
+                    log(`- ${cookie}`);
+                });
+            } else {
+                log('No Okta-related cookies found');
+            }
+            
+            log('\n==== END STORAGE CHECK ====');
+        }
+
+        // Validate config
+        function validateConfig() {
+            clearOutput();
+            log('==== VALIDATING OKTA CONFIG ====');
+            
+            const config = getConfig();
+            
+            // Check required fields
+            const requiredFields = ['clientId', 'issuer', 'redirectUri'];
+            for (const field of requiredFields) {
+                if (!config[field]) {
+                    log(`⚠️ Missing required field: ${field}`);
+                } else {
+                    log(`✅ ${field}: ${config[field]}`);
+                }
+            }
+            
+            // Validation checks
+            if (config.redirectUri) {
+                // Check if redirectUri matches current origin
+                const currentOrigin = window.location.origin;
+                if (!config.redirectUri.startsWith(currentOrigin)) {
+                    log(`⚠️ redirectUri (${config.redirectUri}) doesn't match current origin (${currentOrigin})`);
+                } else {
+                    log(`✅ redirectUri matches current origin`);
+                }
+            }
+            
+            log('\n==== END CONFIG VALIDATION ====');
+        }
+
+        // Monitor network
+        function monitorNetwork() {
+            clearOutput();
+            log('==== MONITORING OKTA NETWORK REQUESTS ====');
+            log('Watching for Okta-related network requests...');
+            
+            // Store original fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                const url = args[0];
+                if (typeof url === 'string' && url.includes('okta')) {
+                    log(`🔍 Okta fetch request: ${url}`);
+                }
+                return originalFetch.apply(this, args);
+            };
+            
+            // Store original XHR open
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(...args) {
+                const url = args[1];
+                if (typeof url === 'string' && url.includes('okta')) {
+                    log(`🔍 Okta XHR request: ${url}`);
+                }
+                return originalXHROpen.apply(this, args);
+            };
+            
+            log('Network monitoring active. Please attempt login in your application...');
+        }
+
+        // Run all diagnostics
+        function runAllDiagnostics() {
+            clearOutput();
+            log('==== RUNNING COMPLETE OKTA DIAGNOSTICS ====');
+            
+            // Output diagnostic metadata
+            log('Current URL: ' + window.location.href);
+            log('Origin: ' + window.location.origin);
+            log('User Agent: ' + navigator.userAgent);
+            
+            // Validate configuration
+            log('\n[1/3] Validating configuration:');
+            validateConfig();
+            
+            // Check storage
+            log('\n[2/3] Checking token storage:');
+            checkTokenStorage();
+            
+            // Setup network monitoring
+            log('\n[3/3] Setting up network monitoring:');
+            monitorNetwork();
+            
+            // Display checklist
+            log('\n==== OKTA CONFIGURATION CHECKLIST ====');
+            log(`
+1. Login to Okta Developer Dashboard at https://dev-43296795-admin.okta.com/
+
+2. Navigate to Applications > Applications
+
+3. Select your application (Client ID: ${getConfig().clientId})
+
+4. Verify these settings:
+   - Sign-in redirect URIs: Should include ${getConfig().redirectUri}
+   - Sign-out redirect URIs: Should include ${window.location.origin}
+   - Allowed grant types: Should include "Authorization Code" and "Refresh Token"
+   - PKCE should be enabled for Authorization Code
+
+5. Under "General Settings":
+   - Ensure "Authentication method" is set to PKCE
+   
+6. Under "Assignments":
+   - Verify user/group assignments include test users
+
+7. Under "API":
+   - Ensure proper scopes are configured (openid, profile, email)
+
+8. Save any changes`);
+            
+            log('\n==== DIAGNOSTIC INITIALIZATION COMPLETE ====');
+        }
+    </script>
+</body>
+</html>
